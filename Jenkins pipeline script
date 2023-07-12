@@ -1,0 +1,44 @@
+pipeline {
+  agent any
+  environment {
+    DOCKERHUB_CREDENTIALS = credentials('dockerhub')
+  }
+  stages {
+    stage('Code checkout') {
+      steps {
+        git branch: 'master' , url: 'https://github.com/glsbharathi/project/'
+      }
+    }
+
+    stage('Test') {
+      steps {
+        echo 'Starting unittests'
+        sh 'export DATABASE_URL=sqlite:///complaints.db && pip3 install -r requirements.txt && pip3 install nose'
+      }
+    }
+    
+    stage('Login') {
+      steps {
+        sh 'echo $DOCKERHUB_CREDENTIALS_PSW | docker login -u $DOCKERHUB_CREDENTIALS_USR --password-stdin'
+      }
+    }
+    
+    stage('Build') {
+      steps {
+        sh 'docker build -t sailajabharathig/project .'
+      }
+    }
+    
+    stage('Push') {
+      steps {
+        sh 'docker push sailajabharathig/project'
+      }
+    }
+   }
+   
+   post {
+     always {
+       sh 'docker logout'
+     }
+   }
+}
